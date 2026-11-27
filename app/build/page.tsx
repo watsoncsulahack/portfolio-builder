@@ -3,10 +3,10 @@ import React, { Suspense, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { usePortfolioEditor } from "@/lib/hooks/usePortfolioEditor";
 import UploadZone from "@/components/UploadZone";
+import ProfileForm from "@/components/ProfileForm";
 import ProfileDashboard from "@/components/ProfileDashboard";
 import TemplateSelector from "@/components/TemplateSelector";
 import PublishPanel from "@/components/publish/PublishPanel";
-import DataEditor from "@/components/editor/DataEditor";
 import HeadshotUploader from "@/components/HeadshotUploader";
 import SectionPhotoManager from "@/components/SectionPhotoManager";
 import VisualAnnotator from "@/components/editor/VisualAnnotator";
@@ -134,7 +134,7 @@ function BuildPageInner() {
     );
   }
 
-  // ── Profile-dashboard path ────────────────────────────────────────────────────
+  // ── Profile-form (scratch) path ───────────────────────────────────────────────
   if (!hasData && entryMode === "profile") {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -149,7 +149,12 @@ function BuildPageInner() {
             Upload a resume instead
           </button>
         </header>
-        <ProfileDashboard onComplete={(d) => loadPortfolio(d as Partial<PortfolioData>)} />
+        <div className="max-w-2xl mx-auto px-4 py-10">
+          <ProfileForm
+            onComplete={(d) => loadPortfolio(d as Partial<PortfolioData>)}
+            onCancel={() => setEntryMode("choose")}
+          />
+        </div>
       </div>
     );
   }
@@ -264,7 +269,7 @@ function BuildPageInner() {
               />
             </div>
 
-            <DataEditor data={data} onChange={updateData} />
+            <ProfileDashboard data={data} onChange={updateData} />
 
             {/* Game / featured work */}
             <div className="bg-white border border-gray-200 rounded-2xl p-4 space-y-3">

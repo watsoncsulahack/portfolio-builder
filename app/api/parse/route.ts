@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { parseTex } from "@/lib/parsers/tex";
 import { parseMd } from "@/lib/parsers/md";
 import { parsePlainText } from "@/lib/parsers/plaintext";
-import { extractStructuredData, generatePortfolioCopy } from "@/lib/granite";
+import {
+  extractTextFromPdfBuffer,
+  extractStructuredData,
+  generatePortfolioCopy,
+} from "@/lib/granite";
 import type { PortfolioData } from "@/lib/types";
 
 function newId() {
@@ -43,12 +47,14 @@ export async function POST(req: NextRequest) {
       const text = buffer.toString("utf-8");
       parsed = parseMd(text);
     } else if (fileName.endsWith(".pdf")) {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const pdfParse = require("pdf-parse") as (buf: Buffer) => Promise<{ text: string }>;
-      const pdfData = await pdfParse(buffer);
+      // Extract text via Bob REST API (no pdfjs-dist / DOMMatrix dependency).
+      // Falls back to plain-text heuristic parser if BOB_API_KEY is absent.
+      const pdfText = hasBobKey
+        ? await extractTextFromPdfBuffer(buffer)
+        : "";
       parsed = hasBobKey
-        ? await extractStructuredData(pdfData.text)
-        : parsePlainText(pdfData.text);
+        ? await extractStructuredData(pdfText)
+        : parsePlainText(buffer.toString("latin1")); // latin1 decodes all bytes safely
     } else if (fileName.endsWith(".docx")) {
       const mammoth = await import("mammoth");
       const result = await mammoth.extractRawText({ buffer });

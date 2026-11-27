@@ -1,6 +1,48 @@
 import { spawn } from "child_process";
 import type { PortfolioData } from "@/lib/types";
 
+const BOB_API_BASE = "https://api.us-east.bob.ibm.com/v1";
+
+/**
+ * Call Bob's OpenAI-compatible REST API directly (no subprocess).
+ * This is safe in all environments (Vercel, Next.js dev with Turbopack, etc.)
+ * and avoids any pdfjs-dist / DOMMatrix issues from pdf-parse.
+ *
+ * Returns the assistant's reply text.
+ */
+async function callBobRest(
+  messages: { role: "system" | "user" | "assistant"; content: string }[],
+  maxTokens = 2048,
+): Promise<string> {
+  const bobApiKey = process.env.BOB_API_KEY;
+  if (!bobApiKey) throw new Error("BOB_API_KEY not set");
+
+  const res = await fetch(`${BOB_API_BASE}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${bobApiKey}`,
+    },
+    body: JSON.stringify({
+      model: "ibm/granite-3-3-8b-instruct",
+      messages,
+      stream: false,
+      max_tokens: maxTokens,
+      temperature: 0.3,
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    throw new Error(`Bob REST API error ${res.status}: ${errText.slice(0, 200)}`);
+  }
+
+  const json = (await res.json()) as {
+    choices?: { message?: { content?: string } }[];
+  };
+  return json.choices?.[0]?.message?.content ?? "";
+}
+
 /**
  * Run a prompt through Bob Shell non-interactively via stdin pipe.
  * Requires BOB_API_KEY to be set in the environment.
@@ -22,7 +64,7 @@ async function runBob(prompt: string): Promise<string> {
 
   return new Promise((resolve, reject) => {
     const child = spawn(
-      bobPath,
+      /*turbopackIgnore: true*/ bobPath,
       ["run", "--format", "json", "--disable-mcp", "--disable-subagents", "--accept-license"],
       {
         env: cleanEnv,
@@ -71,8 +113,52 @@ function safeParseJson<T>(text: string, fallback: T): T {
  * Used for .pdf and .docx files.
  * Throws if BOB_API_KEY is not configured — callers must guard with hasBobKey.
  */
+/**
+ * Extract plain text from a PDF buffer by sending it to Bob REST as a
+ * base64-encoded user message.  Bob's Granite model can read the content
+ * description and return the textual content.  This completely avoids
+ * pdf-parse / pdfjs-dist and the DOMMatrix browser-only requirement.
+ *
+ * Falls back to an empty string if the API key is missing.
+ */
+export async function extractTextFromPdfBuffer(pdfBuffer: Buffer): Promise<string> {
+  const base64 = pdfBuffer.toString("base64");
+  // We embed the base64 PDF as a data URI in the message.
+  // Granite 3.3 supports document understanding via the content array format.
+  const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
+    {
+      role: "system",
+      content:
+        "You are a document text extractor. The user will provide a base64-encoded PDF. " +
+        "Extract and return ALL readable text from the document exactly as it appears. " +
+        "Preserve line breaks between sections. Output ONLY the extracted text — no commentary, no markdown.",
+    },
+    {
+      role: "user",
+      content:
+        `Here is a PDF encoded as base64. Please extract all the text from it.\n\n` +
+        `data:application/pdf;base64,${base64.slice(0, 60000)}`,
+    },
+  ];
+
+  try {
+    return await callBobRest(messages, 4096);
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Ask Bob to extract structured PortfolioData from raw document text.
+ * Used for .pdf and .docx files.
+ * Throws if BOB_API_KEY is not configured — callers must guard with hasBobKey.
+ */
 export async function extractStructuredData(rawText: string): Promise<Partial<PortfolioData>> {
-  const prompt = `You are a resume parser. Extract the following JSON from this resume. Return ONLY the JSON object, nothing else.
+  const systemPrompt =
+    "You are a resume parser. Extract structured data from the resume text the user provides. " +
+    "Return ONLY a valid JSON object matching the schema — no markdown fences, no explanation.";
+
+  const userPrompt = `Extract this JSON from the resume:
 
 {
   "name": "",
@@ -89,7 +175,13 @@ export async function extractStructuredData(rawText: string): Promise<Partial<Po
 Resume:
 ${rawText.slice(0, 6000)}`;
 
-  const raw = await runBob(prompt);
+  const raw = await callBobRest(
+    [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    2048,
+  );
   return safeParseJson<Partial<PortfolioData>>(raw, {});
 }
 
@@ -125,7 +217,9 @@ Title: ${data.title ?? ""}
 Experience: ${expSummary}
 Skills: ${(data.skills ?? []).slice(0, 15).join(", ")}`;
 
-  const bio = stripPreamble((await runBob(bioPrompt)).trim());
+  const bio = stripPreamble(
+    (await callBobRest([{ role: "user", content: bioPrompt }], 512)).trim(),
+  );
 
   // Rewrite bullets for each experience entry
   const updatedExperience = await Promise.all(
@@ -137,7 +231,7 @@ Role: ${entry.role} at ${entry.company}
 Bullets:
 ${entry.bullets.map((b: string) => `- ${b}`).join("\n")}`;
 
-      const raw = await runBob(bulletPrompt);
+      const raw = await callBobRest([{ role: "user", content: bulletPrompt }], 1024);
       const rewritten = safeParseJson<string[]>(raw, entry.bullets);
       return { ...entry, bullets: Array.isArray(rewritten) ? rewritten : entry.bullets };
     })

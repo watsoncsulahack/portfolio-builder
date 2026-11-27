@@ -9,13 +9,27 @@ import type {
   CertificationEntry,
 } from "@/lib/types";
 
-interface Props {
+// ── Two usage modes ───────────────────────────────────────────────────────────
+// 1. Onboarding (no data/onChange) — owns its own state, has "Generate" button
+// 2. Live editor (data + onChange) — binds directly to builder PortfolioData
+
+type OnboardingProps = {
   onComplete: (data: Partial<PortfolioData>) => void;
-}
+  data?: undefined;
+  onChange?: undefined;
+};
+
+type EditorProps = {
+  data: PortfolioData;
+  onChange: (data: PortfolioData) => void;
+  onComplete?: undefined;
+};
+
+type Props = OnboardingProps | EditorProps;
 
 function uid() { return Math.random().toString(36).slice(2, 9); }
 
-// ── Shared input styles ───────────────────────────────────────────────────────
+// ── Shared styles ─────────────────────────────────────────────────────────────
 const INPUT = "w-full rounded-xl border border-neutral-200 px-3 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 transition bg-neutral-50 focus:bg-white";
 const LABEL = "block text-xs font-medium text-neutral-500 uppercase tracking-wide mb-1";
 
@@ -84,8 +98,7 @@ function Section({
   );
 }
 
-// ── Entry modals ──────────────────────────────────────────────────────────────
-
+// ── Modal shell ───────────────────────────────────────────────────────────────
 function Modal({ title, onClose, onSave, children }: {
   title: string; onClose: () => void; onSave: () => void; children: React.ReactNode;
 }) {
@@ -146,11 +159,10 @@ function TextAreaField({ label, name, value, onChange, placeholder, rows = 3 }: 
   );
 }
 
-// ── Experience modal ──────────────────────────────────────────────────────────
+// ── Entry modals ──────────────────────────────────────────────────────────────
+
 function ExperienceModal({ initial, onClose, onSave }: {
-  initial?: ExperienceEntry;
-  onClose: () => void;
-  onSave: (e: ExperienceEntry) => void;
+  initial?: ExperienceEntry; onClose: () => void; onSave: (e: ExperienceEntry) => void;
 }) {
   const [entry, setEntry] = useState<ExperienceEntry>(initial ?? {
     id: uid(), role: "", company: "", startDate: "", endDate: "", bullets: [""],
@@ -168,7 +180,7 @@ function ExperienceModal({ initial, onClose, onSave }: {
         <Field label="End date" name="endDate" value={entry.endDate} onChange={(v) => set({ endDate: v })} placeholder="Present" />
       </div>
       <div>
-        <label className={LABEL}>Bullets <span className="normal-case font-normal text-neutral-400">(leave blank — Bob will write them)</span></label>
+        <label className={LABEL}>Bullets</label>
         <div className="space-y-2">
           {entry.bullets.map((b, i) => (
             <div key={i} className="flex gap-2">
@@ -188,11 +200,8 @@ function ExperienceModal({ initial, onClose, onSave }: {
   );
 }
 
-// ── Education modal ───────────────────────────────────────────────────────────
 function EducationModal({ initial, onClose, onSave }: {
-  initial?: EducationEntry;
-  onClose: () => void;
-  onSave: (e: EducationEntry) => void;
+  initial?: EducationEntry; onClose: () => void; onSave: (e: EducationEntry) => void;
 }) {
   const [entry, setEntry] = useState<EducationEntry>(initial ?? {
     id: uid(), institution: "", degree: "", field: "", startDate: "", endDate: "",
@@ -212,11 +221,8 @@ function EducationModal({ initial, onClose, onSave }: {
   );
 }
 
-// ── Project modal ─────────────────────────────────────────────────────────────
 function ProjectModal({ initial, onClose, onSave }: {
-  initial?: ProjectEntry;
-  onClose: () => void;
-  onSave: (p: ProjectEntry) => void;
+  initial?: ProjectEntry; onClose: () => void; onSave: (p: ProjectEntry) => void;
 }) {
   const [entry, setEntry] = useState<ProjectEntry>(initial ?? {
     id: uid(), name: "", description: "", url: "", technologies: [],
@@ -229,22 +235,16 @@ function ProjectModal({ initial, onClose, onSave }: {
       <div className="grid grid-cols-2 gap-3">
         <Field label="URL" name="url" value={entry.url ?? ""} onChange={(v) => set({ url: v })} placeholder="github.com/…" />
         <Field label="Tech stack" name="tech" value={entry.technologies.join(", ")}
-          onChange={(v) => set({ technologies: v.split(",").map((t) => t.trim()).filter(Boolean) })}
-          placeholder="React, TypeScript, …" />
+          onChange={(v) => set({ technologies: v.split(",").map((t) => t.trim()).filter(Boolean) })} placeholder="React, TypeScript, …" />
       </div>
     </Modal>
   );
 }
 
-// ── Award modal ───────────────────────────────────────────────────────────────
 function AwardModal({ initial, onClose, onSave }: {
-  initial?: AwardEntry;
-  onClose: () => void;
-  onSave: (a: AwardEntry) => void;
+  initial?: AwardEntry; onClose: () => void; onSave: (a: AwardEntry) => void;
 }) {
-  const [entry, setEntry] = useState<AwardEntry>(initial ?? {
-    id: uid(), name: "", issuer: "", date: "",
-  });
+  const [entry, setEntry] = useState<AwardEntry>(initial ?? { id: uid(), name: "", issuer: "", date: "" });
   const set = (patch: Partial<AwardEntry>) => setEntry({ ...entry, ...patch });
   return (
     <Modal title={initial ? "Edit Award" : "Add Award"} onClose={onClose} onSave={() => onSave(entry)}>
@@ -258,45 +258,40 @@ function AwardModal({ initial, onClose, onSave }: {
   );
 }
 
-// ── Cert modal ────────────────────────────────────────────────────────────────
 function CertModal({ initial, onClose, onSave }: {
-  initial?: CertificationEntry;
-  onClose: () => void;
-  onSave: (c: CertificationEntry) => void;
+  initial?: CertificationEntry; onClose: () => void; onSave: (c: CertificationEntry) => void;
 }) {
-  const [entry, setEntry] = useState<CertificationEntry>(initial ?? {
-    id: uid(), name: "", issuer: "", date: "",
-  });
+  const [entry, setEntry] = useState<CertificationEntry>(initial ?? { id: uid(), name: "", issuer: "", date: "" });
   const set = (patch: Partial<CertificationEntry>) => setEntry({ ...entry, ...patch });
   return (
     <Modal title={initial ? "Edit Certification" : "Add Certification"} onClose={onClose} onSave={() => onSave(entry)}>
-      <Field label="Certification name *" name="name" value={entry.name} onChange={(v) => set({ name: v })} placeholder="AWS Certified Developer" />
+      <Field label="Cert name *" name="name" value={entry.name} onChange={(v) => set({ name: v })} placeholder="AWS Certified Developer" />
       <div className="grid grid-cols-2 gap-3">
         <Field label="Issuer" name="issuer" value={entry.issuer} onChange={(v) => set({ issuer: v })} placeholder="Amazon Web Services" />
-        <Field label="Date earned" name="date" value={entry.date} onChange={(v) => set({ date: v })} placeholder="Jan 2024" />
+        <Field label="Date" name="date" value={entry.date} onChange={(v) => set({ date: v })} placeholder="Jan 2024" />
       </div>
       <Field label="Credential URL (optional)" name="url" value={entry.credentialUrl ?? ""} onChange={(v) => set({ credentialUrl: v })} placeholder="credly.com/badges/…" />
     </Modal>
   );
 }
 
-// ── Identity edit modal ───────────────────────────────────────────────────────
 function IdentityModal({ profile, onClose, onSave }: {
-  profile: Partial<PortfolioData>;
-  onClose: () => void;
-  onSave: (p: Partial<PortfolioData>) => void;
+  profile: Partial<PortfolioData>; onClose: () => void; onSave: (p: Partial<PortfolioData>) => void;
 }) {
   const [name, setName] = useState(profile.name ?? "");
   const [title, setTitle] = useState(profile.title ?? "");
+  const [bio, setBio] = useState(profile.bio ?? "");
   const c = profile.contact ?? { email: "" };
   const [contact, setContact] = useState(c);
   const set = (patch: Partial<typeof c>) => setContact({ ...contact, ...patch });
-
   return (
-    <Modal title="Edit Profile Info" onClose={onClose} onSave={() => onSave({ ...profile, name, title, contact })}>
+    <Modal title="Edit Profile Info" onClose={onClose} onSave={() => onSave({ ...profile, name, title, bio, contact })}>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Full name *" name="name" value={name} onChange={setName} placeholder="Alex Rivera" />
         <Field label="Professional title" name="title" value={title} onChange={setTitle} placeholder="Software Engineer" />
+      </div>
+      <TextAreaField label="Bio" name="bio" value={bio} onChange={setBio} placeholder="A short summary about you…" rows={3} />
+      <div className="grid grid-cols-2 gap-3">
         <Field label="Email" name="email" value={contact.email} onChange={(v) => set({ email: v })} placeholder="you@example.com" type="email" />
         <Field label="Phone" name="phone" value={contact.phone ?? ""} onChange={(v) => set({ phone: v })} placeholder="(555) 000-0000" />
         <Field label="Location" name="location" value={contact.location ?? ""} onChange={(v) => set({ location: v })} placeholder="San Francisco, CA" />
@@ -308,18 +303,27 @@ function IdentityModal({ profile, onClose, onSave }: {
   );
 }
 
-// ── Main dashboard ────────────────────────────────────────────────────────────
-
+// ── Modal type ────────────────────────────────────────────────────────────────
 type ModalType = "identity" | "experience" | "education" | "project" | "award" | "cert" | null;
 
-export default function ProfileDashboard({ onComplete }: Props) {
-  const [profile, setProfile] = useState<Partial<PortfolioData>>({
-    name: "", title: "", bio: "",
-    contact: { email: "" },
-    experience: [], education: [], projects: [],
-    skills: [], awards: [], certifications: [],
-    testimonials: [], blog: [], talks: [], images: [],
-  });
+// ── Shared dashboard body ─────────────────────────────────────────────────────
+// Accepts a resolved profile + setter and renders all sections + modals.
+function DashboardBody({
+  profile,
+  setProfile,
+  skillsText,
+  setSkillsText,
+  isLiveEditor,      // true = hide the generate button (already in builder)
+  onGenerate,
+}: {
+  profile: Partial<PortfolioData>;
+  setProfile: (p: Partial<PortfolioData>) => void;
+  skillsText: string;
+  setSkillsText: (s: string) => void;
+  isLiveEditor: boolean;
+  // Receives the enriched data from /api/generate so caller never sees stale state
+  onGenerate?: (enrichedData: Partial<PortfolioData>) => void;
+}) {
   const [modal, setModal] = useState<ModalType>(null);
   const [editingExp, setEditingExp] = useState<ExperienceEntry | undefined>();
   const [editingEdu, setEditingEdu] = useState<EducationEntry | undefined>();
@@ -328,7 +332,6 @@ export default function ProfileDashboard({ onComplete }: Props) {
   const [editingCert, setEditingCert] = useState<CertificationEntry | undefined>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [skillsText, setSkillsText] = useState("");
 
   const exp = profile.experience ?? [];
   const edu = profile.education ?? [];
@@ -339,24 +342,27 @@ export default function ProfileDashboard({ onComplete }: Props) {
 
   const canGenerate = Boolean(profile.name?.trim());
 
-  const generate = async () => {
+  const handleGenerate = async () => {
+    if (!onGenerate) return;
     setLoading(true);
     setError("");
-    const profileWithSkills = { ...profile, skills };
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profile: profileWithSkills }),
+        body: JSON.stringify({ profile: { ...profile, skills } }),
       });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || "Generation failed");
       }
       const { data } = await res.json();
-      onComplete(data);
+      // Pass enriched data to parent — avoids stale-state bug where onGenerate
+      // captured the pre-generate snapshot of profile.
+      onGenerate(data as Partial<PortfolioData>);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
       setLoading(false);
     }
   };
@@ -366,39 +372,35 @@ export default function ProfileDashboard({ onComplete }: Props) {
     : "?";
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 space-y-4">
-
-      {/* ── Identity card ── */}
+    <div className="space-y-4">
+      {/* Identity card */}
       <div className="rounded-2xl border border-neutral-200 bg-white overflow-hidden">
-        <div className="h-16 bg-gradient-to-r from-purple-600 to-blue-500" />
-        <div className="px-5 pb-5">
-          <div className="-mt-8 mb-3 flex items-end justify-between">
-            <div className="size-16 rounded-2xl bg-white border-4 border-white shadow-md flex items-center justify-center">
-              <span className="text-lg font-bold text-purple-600">{initials}</span>
+        <div className="h-14 bg-gradient-to-r from-purple-600 to-blue-500" />
+        <div className="px-4 pb-4">
+          <div className="-mt-7 mb-3 flex items-end justify-between">
+            <div className="size-14 rounded-2xl bg-white border-4 border-white shadow-md flex items-center justify-center">
+              <span className="text-base font-bold text-purple-600">{initials}</span>
             </div>
             <button onClick={() => setModal("identity")}
-              className="mb-1 flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-200 text-sm font-medium text-neutral-600 hover:bg-neutral-50 hover:border-neutral-300 transition-colors">
-              <svg className="size-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              className="mb-1 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-neutral-200 text-xs font-medium text-neutral-600 hover:bg-neutral-50 transition-colors">
+              <svg className="size-3" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z" />
               </svg>
-              {profile.name ? "Edit" : "Add info"}
+              {profile.name ? "Edit info" : "Add info"}
             </button>
           </div>
           {profile.name ? (
             <>
-              <h1 className="text-lg font-bold text-neutral-900">{profile.name}</h1>
-              {profile.title && <p className="text-sm text-neutral-500">{profile.title}</p>}
-              {profile.contact?.email && (
-                <p className="text-xs text-neutral-400 mt-1">{profile.contact.email}</p>
-              )}
+              <p className="text-sm font-bold text-neutral-900">{profile.name}</p>
+              {profile.title && <p className="text-xs text-neutral-500">{profile.title}</p>}
+              {profile.contact?.email && <p className="text-xs text-neutral-400 mt-0.5">{profile.contact.email}</p>}
             </>
           ) : (
-            <button onClick={() => setModal("identity")}
-              className="text-sm text-neutral-400 hover:text-blue-600 transition-colors">
-              Click <span className="underline">Edit info</span> to add your name and contact details
+            <button onClick={() => setModal("identity")} className="text-xs text-neutral-400 hover:text-blue-600 transition-colors">
+              Click <span className="underline">Edit info</span> to add your name
             </button>
           )}
-          <div className="mt-3 pt-3 border-t border-neutral-100 flex gap-4 text-sm">
+          <div className="mt-3 pt-3 border-t border-neutral-100 flex gap-3 text-xs">
             {[
               { n: exp.length, label: "Jobs" },
               { n: edu.length, label: "Schools" },
@@ -407,39 +409,41 @@ export default function ProfileDashboard({ onComplete }: Props) {
             ].map(({ n, label }, i, arr) => (
               <React.Fragment key={label}>
                 <div className="text-center">
-                  <p className="text-lg font-bold text-neutral-900">{n}</p>
-                  <p className="text-xs text-neutral-400">{label}</p>
+                  <p className="text-base font-bold text-neutral-900">{n}</p>
+                  <p className="text-neutral-400">{label}</p>
                 </div>
-                {i < arr.length - 1 && <div className="w-px bg-neutral-100" />}
+                {i < arr.length - 1 && <div className="w-px bg-neutral-100 self-stretch" />}
               </React.Fragment>
             ))}
           </div>
         </div>
       </div>
 
-      {/* ── Generate button ── */}
-      <div className="rounded-2xl border border-purple-100 bg-purple-50 p-4 flex items-center justify-between gap-4">
-        <div>
-          <p className="text-sm font-semibold text-purple-900">Ready to build your portfolio?</p>
-          <p className="text-xs text-purple-600 mt-0.5">
-            IBM Bob will write your bio and polish your experience bullets.
-            {!canGenerate && <span className="text-purple-400"> Add your name first.</span>}
-          </p>
-          {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+      {/* Generate button — only in onboarding mode */}
+      {!isLiveEditor && (
+        <div className="rounded-2xl border border-purple-100 bg-purple-50 p-4 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-purple-900">Ready to build your portfolio?</p>
+            <p className="text-xs text-purple-600 mt-0.5">
+              Bob will write your bio and polish your bullets.
+              {!canGenerate && <span className="text-purple-400"> Add your name first.</span>}
+            </p>
+            {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+          </div>
+          <button
+            onClick={handleGenerate}
+            disabled={!canGenerate || loading}
+            className="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            style={{ background: loading ? "#9333ea" : "linear-gradient(135deg, #7c3aed, #3b82f6)" }}
+          >
+            {loading
+              ? <><span className="size-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />Generating…</>
+              : "✨ Generate"}
+          </button>
         </div>
-        <button
-          onClick={generate}
-          disabled={!canGenerate || loading}
-          className="shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-          style={{ background: loading ? "#9333ea" : "linear-gradient(135deg, #7c3aed, #3b82f6)" }}
-        >
-          {loading ? (
-            <><span className="size-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Generating…</>
-          ) : "✨ Generate portfolio"}
-        </button>
-      </div>
+      )}
 
-      {/* ── Experience ── */}
+      {/* Experience */}
       <Section title="Experience" icon="💼" count={exp.length} onAdd={() => { setEditingExp(undefined); setModal("experience"); }}>
         {exp.map((e) => (
           <EntryCard key={e.id}
@@ -452,20 +456,20 @@ export default function ProfileDashboard({ onComplete }: Props) {
         ))}
       </Section>
 
-      {/* ── Education ── */}
+      {/* Education */}
       <Section title="Education" icon="🎓" count={edu.length} onAdd={() => { setEditingEdu(undefined); setModal("education"); }}>
         {edu.map((e) => (
           <EntryCard key={e.id}
             title={`${e.degree} in ${e.field}`}
             subtitle={e.institution}
-            detail={[e.startDate && e.endDate ? `${e.startDate} – ${e.endDate}` : "", e.gpa ? `GPA: ${e.gpa}` : ""].filter(Boolean).join(" · ")}
+            detail={e.startDate && e.endDate ? `${e.startDate} – ${e.endDate}` : ""}
             onEdit={() => { setEditingEdu(e); setModal("education"); }}
             onDelete={() => setProfile({ ...profile, education: edu.filter((x) => x.id !== e.id) })}
           />
         ))}
       </Section>
 
-      {/* ── Projects ── */}
+      {/* Projects */}
       <Section title="Projects" icon="🛠️" count={proj.length} onAdd={() => { setEditingProj(undefined); setModal("project"); }}>
         {proj.map((p) => (
           <EntryCard key={p.id}
@@ -478,114 +482,145 @@ export default function ProfileDashboard({ onComplete }: Props) {
         ))}
       </Section>
 
-      {/* ── Skills ── */}
+      {/* Skills */}
       <section className="rounded-2xl border border-neutral-200 bg-white overflow-hidden">
-        <div className="px-4 py-3.5 border-b border-neutral-100">
-          <p className="text-sm font-semibold text-neutral-800 flex items-center gap-2"><span>⚡</span> Skills</p>
+        <div className="px-4 py-3 border-b border-neutral-100">
+          <p className="text-sm font-semibold text-neutral-800">⚡ Skills</p>
         </div>
         <div className="p-4 space-y-3">
           <input value={skillsText} onChange={(e) => setSkillsText(e.target.value)}
-            placeholder="TypeScript, React, Python, SQL, Figma, AWS…"
-            className={INPUT} />
+            placeholder="TypeScript, React, Python, SQL…" className={INPUT} />
           {skills.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {skills.map((s) => (
-                <span key={s} className="text-xs bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-1 rounded-full">{s}</span>
+                <span key={s} className="text-xs bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-full">{s}</span>
               ))}
             </div>
           )}
-          <p className="text-xs text-neutral-400">Comma-separated list of skills, tools, and technologies</p>
         </div>
       </section>
 
-      {/* ── Awards ── */}
+      {/* Awards */}
       <Section title="Awards" icon="🏆" count={awards.length} onAdd={() => { setEditingAward(undefined); setModal("award"); }}>
         {awards.map((a) => (
           <EntryCard key={a.id}
-            title={a.name}
-            subtitle={`${a.issuer} · ${a.date}`}
-            detail={a.description}
+            title={a.name} subtitle={`${a.issuer} · ${a.date}`} detail={a.description}
             onEdit={() => { setEditingAward(a); setModal("award"); }}
             onDelete={() => setProfile({ ...profile, awards: awards.filter((x) => x.id !== a.id) })}
           />
         ))}
       </Section>
 
-      {/* ── Certifications ── */}
+      {/* Certifications */}
       <Section title="Certifications" icon="📜" count={certs.length} onAdd={() => { setEditingCert(undefined); setModal("cert"); }}>
         {certs.map((c) => (
           <EntryCard key={c.id}
-            title={c.name}
-            subtitle={`${c.issuer} · ${c.date}`}
+            title={c.name} subtitle={`${c.issuer} · ${c.date}`}
             onEdit={() => { setEditingCert(c); setModal("cert"); }}
             onDelete={() => setProfile({ ...profile, certifications: certs.filter((x) => x.id !== c.id) })}
           />
         ))}
       </Section>
 
-      {/* ── Modals ── */}
+      {/* Modals */}
       {modal === "identity" && (
-        <IdentityModal
-          profile={profile}
-          onClose={() => setModal(null)}
-          onSave={(p) => { setProfile(p); setModal(null); }}
-        />
+        <IdentityModal profile={profile} onClose={() => setModal(null)}
+          onSave={(p) => { setProfile(p); setModal(null); }} />
       )}
       {modal === "experience" && (
-        <ExperienceModal
-          initial={editingExp}
-          onClose={() => setModal(null)}
+        <ExperienceModal initial={editingExp} onClose={() => setModal(null)}
           onSave={(e) => {
             const next = editingExp ? exp.map((x) => x.id === e.id ? e : x) : [...exp, e];
-            setProfile({ ...profile, experience: next });
-            setModal(null);
-          }}
-        />
+            setProfile({ ...profile, experience: next }); setModal(null);
+          }} />
       )}
       {modal === "education" && (
-        <EducationModal
-          initial={editingEdu}
-          onClose={() => setModal(null)}
+        <EducationModal initial={editingEdu} onClose={() => setModal(null)}
           onSave={(e) => {
             const next = editingEdu ? edu.map((x) => x.id === e.id ? e : x) : [...edu, e];
-            setProfile({ ...profile, education: next });
-            setModal(null);
-          }}
-        />
+            setProfile({ ...profile, education: next }); setModal(null);
+          }} />
       )}
       {modal === "project" && (
-        <ProjectModal
-          initial={editingProj}
-          onClose={() => setModal(null)}
+        <ProjectModal initial={editingProj} onClose={() => setModal(null)}
           onSave={(p) => {
             const next = editingProj ? proj.map((x) => x.id === p.id ? p : x) : [...proj, p];
-            setProfile({ ...profile, projects: next });
-            setModal(null);
-          }}
-        />
+            setProfile({ ...profile, projects: next }); setModal(null);
+          }} />
       )}
       {modal === "award" && (
-        <AwardModal
-          initial={editingAward}
-          onClose={() => setModal(null)}
+        <AwardModal initial={editingAward} onClose={() => setModal(null)}
           onSave={(a) => {
             const next = editingAward ? awards.map((x) => x.id === a.id ? a : x) : [...awards, a];
-            setProfile({ ...profile, awards: next });
-            setModal(null);
-          }}
-        />
+            setProfile({ ...profile, awards: next }); setModal(null);
+          }} />
       )}
       {modal === "cert" && (
-        <CertModal
-          initial={editingCert}
-          onClose={() => setModal(null)}
+        <CertModal initial={editingCert} onClose={() => setModal(null)}
           onSave={(c) => {
             const next = editingCert ? certs.map((x) => x.id === c.id ? c : x) : [...certs, c];
-            setProfile({ ...profile, certifications: next });
-            setModal(null);
-          }}
-        />
+            setProfile({ ...profile, certifications: next }); setModal(null);
+          }} />
       )}
+    </div>
+  );
+}
+
+// ── Main export ───────────────────────────────────────────────────────────────
+
+export default function ProfileDashboard(props: Props) {
+  const isLiveEditor = Boolean(props.data);
+
+  // All hooks called unconditionally — React rules require this.
+  // Onboarding mode uses ownProfile/ownSkillsText; live-editor mode ignores them.
+  const [ownProfile, setOwnProfile] = useState<Partial<PortfolioData>>({
+    name: "", title: "", bio: "",
+    contact: { email: "" },
+    experience: [], education: [], projects: [],
+    skills: [], awards: [], certifications: [],
+    testimonials: [], blog: [], talks: [], images: [],
+  });
+  const [ownSkillsText, setOwnSkillsText] = useState("");
+  // Live-editor: initialise skills text from the incoming data (once)
+  const [liveSkillsText, setLiveSkillsText] = useState(
+    (props.data?.skills ?? []).join(", ")
+  );
+
+  if (isLiveEditor) {
+    // ── Live editor mode ────────────────────────────────────────────────────
+    const { data, onChange } = props as EditorProps;
+
+    const handleSkillsChange = (text: string) => {
+      setLiveSkillsText(text);
+      const skills = text.split(",").map((s) => s.trim()).filter(Boolean);
+      onChange({ ...data, skills } as PortfolioData);
+    };
+
+    return (
+      <DashboardBody
+        profile={data}
+        setProfile={(p) => onChange(p as PortfolioData)}
+        skillsText={liveSkillsText}
+        setSkillsText={handleSkillsChange}
+        isLiveEditor={true}
+      />
+    );
+  }
+
+  // ── Onboarding mode ─────────────────────────────────────────────────────────
+  const { onComplete } = props as OnboardingProps;
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 space-y-4">
+      <DashboardBody
+        profile={ownProfile}
+        setProfile={setOwnProfile}
+        skillsText={ownSkillsText}
+        setSkillsText={setOwnSkillsText}
+        isLiveEditor={false}
+        // Pass enriched data returned by /api/generate directly to onComplete
+        onGenerate={(enrichedData) => onComplete(enrichedData)}
+      />
     </div>
   );
 }
