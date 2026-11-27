@@ -74,11 +74,11 @@ export default function HomePage() {
             <Link href="/build"
               className="inline-flex items-center gap-2 font-bold text-base px-7 py-3.5 rounded-xl text-white transition-all hover:scale-105 hover:shadow-2xl"
               style={{ background: "linear-gradient(135deg, #7c3aed, #3b82f6)", boxShadow: "0 4px 24px rgba(124,58,237,0.4)" }}>
-              Build your portfolio →
+              I have a resume →
             </Link>
-            <Link href="/portfolio/demo"
+            <Link href="/build#profile"
               className="inline-flex items-center gap-2 font-bold text-base px-7 py-3.5 rounded-xl border border-white/20 text-white/80 hover:border-white/40 hover:text-white transition-all">
-              See demo portfolio
+              ✍️ Start from scratch
             </Link>
           </div>
         </div>
@@ -88,7 +88,7 @@ export default function HomePage() {
       <section className="px-6 py-16 max-w-5xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
-            { n: "01", icon: "📄", title: "Drop your resume", body: ".tex and .md are parsed locally — no upload. PDF and DOCX use IBM Granite on watsonx.ai." },
+            { n: "01", icon: "📄✍️", title: "Resume or profile", body: "Upload a .pdf/.docx/.tex/.md resume, or fill out a quick form from scratch. IBM Bob handles the rest." },
             { n: "02", icon: "🎨", title: "Pick a template & edit", body: "5 animated templates. Click any text in the preview to edit it. Toggle sections on/off. Customise colours." },
             { n: "03", icon: "🚀", title: "Deploy or download", body: "GitHub Pages wizard — one click commits your portfolio. Or download a self-contained HTML file." },
           ].map(({ n, icon, title, body }) => (
@@ -152,17 +152,23 @@ export default function HomePage() {
       {/* ── CTA ── */}
       <section className="px-6 py-20 text-center max-w-3xl mx-auto">
         <h2 className="text-3xl md:text-5xl font-black tracking-tight mb-4">
-          Your resume is one upload<br />
+          Resume or no resume —<br />
           <span style={{ backgroundImage: "linear-gradient(135deg, #a78bfa, #38bdf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-            away from a portfolio.
+            you get a portfolio.
           </span>
         </h2>
-        <p className="text-white/40 mb-8">Free. No sign-up. Works in your browser.</p>
-        <Link href="/build"
-          className="inline-flex items-center gap-2 font-bold text-lg px-8 py-4 rounded-xl text-white transition-all hover:scale-105 hover:shadow-2xl"
-          style={{ background: "linear-gradient(135deg, #7c3aed, #3b82f6)", boxShadow: "0 4px 24px rgba(124,58,237,0.4)" }}>
-          Build your portfolio →
-        </Link>
+        <p className="text-white/40 mb-8">Free. No sign-up. Your data stays in your browser.</p>
+        <div className="flex flex-wrap gap-4 justify-center">
+          <Link href="/build"
+            className="inline-flex items-center gap-2 font-bold text-lg px-8 py-4 rounded-xl text-white transition-all hover:scale-105 hover:shadow-2xl"
+            style={{ background: "linear-gradient(135deg, #7c3aed, #3b82f6)", boxShadow: "0 4px 24px rgba(124,58,237,0.4)" }}>
+            Upload a resume →
+          </Link>
+          <Link href="/build"
+            className="inline-flex items-center gap-2 font-bold text-lg px-8 py-4 rounded-xl border border-white/20 text-white/80 hover:border-white/40 hover:text-white transition-all">
+            ✍️ Build from scratch
+          </Link>
+        </div>
       </section>
 
       {/* ── FOOTER ── */}
