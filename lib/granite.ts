@@ -13,7 +13,7 @@ async function runBob(prompt: string): Promise<string> {
   const bobPath = process.env.BOB_PATH || "bob";
   const { stdout } = await execFileAsync(
     bobPath,
-    ["run", "--format", "json", "--disable-mcp", "--disable-subagents", prompt],
+    ["run", "--format", "json", "--disable-mcp", "--disable-subagents", "--accept-license", prompt],
     {
       env: { ...process.env },
       maxBuffer: 10 * 1024 * 1024, // 10MB
