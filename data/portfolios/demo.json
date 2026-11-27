@@ -1,0 +1,59 @@
+{
+  "slug": "demo",
+  "templateId": "bold",
+  "createdAt": "2026-01-01T00:00:00.000Z",
+  "updatedAt": "2026-01-01T00:00:00.000Z",
+  "data": {
+    "name": "Alex Demo",
+    "title": "Software Engineer",
+    "bio": "I build things that run fast and break rarely. Exploring AI-powered tooling, game dev, and full-stack web. I care about clean interfaces, tight feedback loops, and work that actually ships.",
+    "contact": {
+      "email": "demo@example.com",
+      "location": "San Francisco, CA",
+      "github": "https://github.com/demo-user",
+      "website": "https://example.com"
+    },
+    "experience": [],
+    "education": [
+      {
+        "id": "edu1",
+        "institution": "State University",
+        "degree": "B.S.",
+        "field": "Computer Science",
+        "startDate": "2022",
+        "endDate": "2026"
+      }
+    ],
+    "projects": [
+      {
+        "id": "proj1",
+        "name": "Portfolio Builder",
+        "description": "AI-assisted portfolio website builder — upload a .tex, .md, .pdf, or .docx resume, pick a template, click to edit, and deploy to GitHub Pages in one click. Powered by IBM Bob on watsonx.ai.",
+        "url": "https://example.com",
+        "technologies": ["Next.js", "TypeScript", "Tailwind CSS", "IBM Bob / watsonx.ai"],
+        "image": null
+      }
+    ],
+    "skills": [
+      "TypeScript", "React", "Next.js", "Node.js",
+      "Python", "Rust", "C++", "Docker",
+      "PostgreSQL", "Game Development", "LaTeX", "CI/CD"
+    ],
+    "awards": [],
+    "certifications": [],
+    "testimonials": [],
+    "blog": [],
+    "talks": [],
+    "images": [],
+    "accentColor": "#7c3aed",
+    "portfolioUrl": "https://example.com",
+    "openToWork": true,
+    "game": {
+      "name": "My Game",
+      "description": "A game I built — playable in the browser.",
+      "url": "https://example.com",
+      "thumbnail": null,
+      "technologies": ["C++", "Game Engine", "WebAssembly"]
+    }
+  }
+}

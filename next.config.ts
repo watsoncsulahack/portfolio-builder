@@ -1,9 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
   turbopack: {
     rules: {
       "*.css": {
@@ -12,6 +9,9 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  // Prevent pdf-parse (and its bundled pdfjs) from being included in the
+  // client-side bundle.  It runs only inside the /api/parse Route Handler.
+  serverExternalPackages: ["pdf-parse"],
 };
 
 export default nextConfig;
