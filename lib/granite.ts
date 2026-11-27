@@ -1,34 +1,59 @@
-import { execFile } from "child_process";
-import { promisify } from "util";
+import { spawn } from "child_process";
 import type { PortfolioData } from "@/lib/types";
 
-const execFileAsync = promisify(execFile);
-
 /**
- * Run a prompt through Bob Shell non-interactively.
+ * Run a prompt through Bob Shell non-interactively via stdin pipe.
  * Requires BOB_API_KEY to be set in the environment.
  * Uses --format json which emits a single JSON object with `last_message`.
+ *
+ * We pipe the prompt via stdin (echo "..." | bob run) rather than passing it
+ * as a CLI argument so that multi-line prompts with special characters are
+ * never mangled by shell argument parsing.
+ *
+ * We also strip BOB_SUPERVISED / BOB_SESSION from the child env so that
+ * the subprocess is not treated as a nested Bob session when Next.js dev
+ * is started inside a Bob shell session.
  */
 async function runBob(prompt: string): Promise<string> {
   const bobPath = process.env.BOB_PATH || "bob";
-  const { stdout } = await execFileAsync(
-    bobPath,
-    ["run", "--format", "json", "--disable-mcp", "--disable-subagents", "--accept-license", prompt],
-    {
-      env: { ...process.env },
-      maxBuffer: 10 * 1024 * 1024, // 10MB
-      timeout: 120_000,
-    }
-  );
 
-  // --format json emits a single JSON object: { type: "result", last_message, ... }
-  try {
-    const result = JSON.parse(stdout.trim());
-    if (result.last_message) return result.last_message as string;
-  } catch {
-    // fall through to raw stdout
-  }
-  return stdout;
+  // Strip Bob-session guard vars to avoid "Nested session not allowed".
+  const { BOB_SUPERVISED: _a, BOB_SESSION: _b, ...cleanEnv } = process.env;
+
+  return new Promise((resolve, reject) => {
+    const child = spawn(
+      bobPath,
+      ["run", "--format", "json", "--disable-mcp", "--disable-subagents", "--accept-license"],
+      {
+        env: cleanEnv,
+        stdio: ["pipe", "pipe", "pipe"],
+      }
+    );
+
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (d: Buffer) => { stdout += d.toString(); });
+    child.stderr.on("data", (d: Buffer) => { stderr += d.toString(); });
+
+    child.on("close", (code) => {
+      if (code !== 0) {
+        reject(new Error(`Bob exited ${code}: ${stderr.trim() || stdout.trim()}`));
+        return;
+      }
+      // --format json emits a single JSON object: { type: "result", last_message, ... }
+      try {
+        const result = JSON.parse(stdout.trim());
+        if (result.last_message) { resolve(result.last_message as string); return; }
+      } catch { /* fall through */ }
+      resolve(stdout);
+    });
+
+    child.on("error", (err) => reject(new Error(`Bob spawn error: ${err.message}`)));
+
+    // Write the prompt to stdin and close it (equivalent to: echo "..." | bob run)
+    child.stdin.write(prompt, "utf8");
+    child.stdin.end();
+  });
 }
 
 function safeParseJson<T>(text: string, fallback: T): T {
