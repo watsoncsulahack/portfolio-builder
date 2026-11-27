@@ -7,44 +7,28 @@ const execFileAsync = promisify(execFile);
 /**
  * Run a prompt through Bob Shell non-interactively.
  * Requires BOB_API_KEY to be set in the environment.
- * Returns the assistant's last message text.
+ * Uses --format json which emits a single JSON object with `last_message`.
  */
-async function runBob(prompt: string, maxTokens = 2000): Promise<string> {
+async function runBob(prompt: string): Promise<string> {
   const bobPath = process.env.BOB_PATH || "bob";
-  try {
-    const { stdout } = await execFileAsync(
-      bobPath,
-      ["run", "--format", "stream-json", prompt],
-      {
-        env: { ...process.env },
-        maxBuffer: 10 * 1024 * 1024, // 10MB
-        timeout: 60_000,
-      }
-    );
-
-    // stream-json emits NDJSON — find the last "result" event
-    const lines = stdout.trim().split("\n").filter(Boolean);
-    for (let i = lines.length - 1; i >= 0; i--) {
-      try {
-        const event = JSON.parse(lines[i]);
-        if (event.type === "result" && event.last_message) {
-          return event.last_message;
-        }
-        // Also look for the last assistant message event
-        if (event.type === "message" && event.role === "assistant" && event.content) {
-          return typeof event.content === "string"
-            ? event.content
-            : event.content.map((c: { text?: string }) => c.text ?? "").join("");
-        }
-      } catch {
-        // skip non-JSON lines
-      }
+  const { stdout } = await execFileAsync(
+    bobPath,
+    ["run", "--format", "json", "--disable-mcp", "--disable-subagents", prompt],
+    {
+      env: { ...process.env },
+      maxBuffer: 10 * 1024 * 1024, // 10MB
+      timeout: 120_000,
     }
-    // Fallback: return all stdout
-    return stdout;
-  } catch (err) {
-    throw new Error(`Bob Shell error: ${err instanceof Error ? err.message : String(err)}`);
+  );
+
+  // --format json emits a single JSON object: { type: "result", last_message, ... }
+  try {
+    const result = JSON.parse(stdout.trim());
+    if (result.last_message) return result.last_message as string;
+  } catch {
+    // fall through to raw stdout
   }
+  return stdout;
 }
 
 function safeParseJson<T>(text: string, fallback: T): T {
@@ -60,6 +44,7 @@ function safeParseJson<T>(text: string, fallback: T): T {
 /**
  * Ask Bob to extract structured PortfolioData from raw document text.
  * Used for .pdf and .docx files.
+ * Throws if BOB_API_KEY is not configured — callers must guard with hasBobKey.
  */
 export async function extractStructuredData(rawText: string): Promise<Partial<PortfolioData>> {
   const prompt = `You are a resume parser. Extract the following JSON from this resume. Return ONLY the JSON object, nothing else.
@@ -85,6 +70,7 @@ ${rawText.slice(0, 6000)}`;
 
 /**
  * Ask Bob to generate a polished bio and rewrite bullet points as portfolio prose.
+ * Callers must guard with hasBobKey before calling.
  */
 export async function generatePortfolioCopy(data: Partial<PortfolioData>): Promise<Partial<PortfolioData>> {
   const expSummary = (data.experience ?? [])
