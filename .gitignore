@@ -43,3 +43,6 @@ next-env.d.ts
 # user portfolio data — keep demo.json but ignore real user portfolios
 /data/portfolios/*.json
 !/data/portfolios/demo.json
+
+# Keep the example env file (it has no secrets)
+!.env.local.example

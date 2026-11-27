@@ -2,14 +2,14 @@
 
 An AI-assisted portfolio website builder. Upload your resume (`.tex`, `.md`, `.pdf`, `.docx`) and get a polished, animated portfolio website you can edit, customize, and publish — all in-browser.
 
-**Live at:** [alro.website](https://alro.website)
+Powered by **IBM Bob** on **watsonx.ai**.
 
 ---
 
 ## Features
 
-- **Resume parsing** — `.tex` and `.md` files are parsed locally with zero AI tokens. `.pdf`/`.docx` use IBM Bob Shell if available.
-- **4 templates** — Classic (dark hero), Minimal (editorial), Bold (dark + gradients), Vibrant (color-blocked orange/yellow)
+- **Resume parsing** — `.tex` and `.md` files are parsed locally with zero AI tokens. `.pdf`/`.docx` files are sent to IBM Bob (watsonx.ai Granite) for extraction.
+- **5 templates** — Classic (dark hero), Minimal (editorial), Bold (dark + gradients), Vibrant (color-blocked), Terminal (monospace)
 - **Sticky nav** — scroll-aware navigation bar auto-highlights the active section on all templates
 - **WYSIWYG editing** — click any text to edit in-place
 - **Sidebar form editor** — add/remove experience, education, and project entries from the right panel
@@ -24,11 +24,9 @@ An AI-assisted portfolio website builder. Upload your resume (`.tex`, `.md`, `.p
 ## Getting started
 
 ```bash
-# From the workspace root:
-npm run dev
-
-# Or directly:
 cd portfolio-app
+cp .env.local.example .env.local   # fill in your BOB_API_KEY
+npm install
 npm run dev
 ```
 
@@ -38,20 +36,28 @@ Then open **http://localhost:3000**.
 
 ## Environment variables
 
-Copy `.env.local.example` to `.env.local` and fill in the values you need:
-
-```bash
-cp portfolio-app/.env.local.example portfolio-app/.env.local
-```
+Copy `.env.local.example` to `.env.local` and fill in the values:
 
 | Variable | Required | Purpose |
 |---|---|---|
-| `BOB_API_KEY` | Optional | Enables AI bio generation and `.pdf`/`.docx` parsing via IBM Bob Shell |
+| `BOB_API_KEY` | Optional | Enables AI bio generation and `.pdf`/`.docx` parsing via IBM Bob |
 | `BOB_PATH` | Optional | Path to `bob` binary (default: `bob`) |
 | `BLOB_READ_WRITE_TOKEN` | Optional | Vercel Blob token for hosted portfolio URLs |
-| `NEXT_PUBLIC_BASE_URL` | Optional | Base URL for shareable links (default: `http://localhost:3000`) |
+| `NEXT_PUBLIC_BASE_URL` | Optional | Base URL for shareable links |
 
 If `BOB_API_KEY` is not set, `.tex` and `.md` parsing still work fully offline and AI steps are silently skipped.
+
+---
+
+## Deploying to Vercel
+
+1. Push this repo to GitHub (already done — see `watsoncsulahack/portfolio-builder`).
+2. Go to [vercel.com/new](https://vercel.com/new) → **Import Git Repository** → select `portfolio-builder`.
+3. Set the **Root Directory** to `portfolio-app` (or leave blank if deploying from repo root).
+4. Add environment variables from `.env.local.example` in the Vercel dashboard.
+5. Click **Deploy**.
+
+For hosted portfolio URLs (`/portfolio/<slug>`), create a Vercel Blob store in the dashboard and set `BLOB_READ_WRITE_TOKEN`.
 
 ---
 
@@ -67,37 +73,21 @@ portfolio-app/
 │   ├── editor/
 │   │   ├── DataEditor.tsx        # Sidebar: add/remove/edit entries
 │   │   └── EditableText.tsx      # Click-to-edit WYSIWYG components
-│   ├── templates/
-│   │   ├── ClassicTemplate.tsx   # Dark navy hero + timeline experience
-│   │   ├── MinimalTemplate.tsx   # Editorial, full-screen giant type
-│   │   ├── BoldTemplate.tsx      # Dark bg with gradient orbs
-│   │   └── VibrantTemplate.tsx   # Color-blocked orange/yellow gradient
+│   ├── templates/                # 5 portfolio templates
 │   ├── publish/PublishPanel.tsx  # Download HTML + shareable link + GitHub Pages
 │   ├── UploadZone.tsx            # Drag-and-drop file upload
-│   └── TemplateSelector.tsx      # Template picker
+│   └── TemplateSelector.tsx     # Template picker
 ├── lib/
 │   ├── types.ts                  # PortfolioData interfaces
-│   ├── granite.ts                # Bob Shell client (runBob via child_process)
+│   ├── granite.ts                # IBM Bob Shell client (runBob via child_process)
 │   ├── templateRegistry.ts       # Maps TemplateId → component
 │   ├── parsers/
-│   │   ├── tex.ts                # LaTeX parser (Allan's letter-class format)
-│   │   └── md.ts                 # Markdown parser with gray-matter
+│   │   ├── tex.ts                # LaTeX resume parser
+│   │   └── md.ts                 # Markdown parser (gray-matter)
 │   ├── export/staticHtml.ts      # Generate self-contained HTML bundle
 │   └── hooks/
 │       ├── usePortfolioEditor.ts # State + localStorage auto-save
 │       └── useScrollReveal.ts    # IntersectionObserver scroll animations
 └── data/portfolios/
-    └── demo.json                 # Demo portfolio (Allan Rondeau / alro.website)
+    └── demo.json                 # Sanitized demo portfolio
 ```
-
----
-
-## Deploying to alro.website (Vercel)
-
-1. Push the repo to GitHub.
-2. Import `portfolio-app` as the **root directory** in Vercel.
-3. Add the environment variables from `.env.local.example`.
-4. Set your custom domain to `alro.website` in Vercel Project Settings → Domains.
-5. Update your DNS records to point `alro.website` to Vercel's nameservers.
-
-For hosted portfolio URLs (`alro.website/portfolio/<slug>`), you also need a Vercel Blob store. Create one in the Vercel dashboard and set `BLOB_READ_WRITE_TOKEN`.
