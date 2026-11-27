@@ -71,12 +71,12 @@ export default function HomePage() {
             Pick a template. Click to edit. Deploy to GitHub Pages — no code, no account, no cost.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
-            <Link href="/build"
+            <Link href="/build?mode=upload"
               className="inline-flex items-center gap-2 font-bold text-base px-7 py-3.5 rounded-xl text-white transition-all hover:scale-105 hover:shadow-2xl"
               style={{ background: "linear-gradient(135deg, #7c3aed, #3b82f6)", boxShadow: "0 4px 24px rgba(124,58,237,0.4)" }}>
               I have a resume →
             </Link>
-            <Link href="/build#profile"
+            <Link href="/build?mode=profile"
               className="inline-flex items-center gap-2 font-bold text-base px-7 py-3.5 rounded-xl border border-white/20 text-white/80 hover:border-white/40 hover:text-white transition-all">
               ✍️ Start from scratch
             </Link>
@@ -159,12 +159,12 @@ export default function HomePage() {
         </h2>
         <p className="text-white/40 mb-8">Free. No sign-up. Your data stays in your browser.</p>
         <div className="flex flex-wrap gap-4 justify-center">
-          <Link href="/build"
+          <Link href="/build?mode=upload"
             className="inline-flex items-center gap-2 font-bold text-lg px-8 py-4 rounded-xl text-white transition-all hover:scale-105 hover:shadow-2xl"
             style={{ background: "linear-gradient(135deg, #7c3aed, #3b82f6)", boxShadow: "0 4px 24px rgba(124,58,237,0.4)" }}>
             Upload a resume →
           </Link>
-          <Link href="/build"
+          <Link href="/build?mode=profile"
             className="inline-flex items-center gap-2 font-bold text-lg px-8 py-4 rounded-xl border border-white/20 text-white/80 hover:border-white/40 hover:text-white transition-all">
             ✍️ Build from scratch
           </Link>

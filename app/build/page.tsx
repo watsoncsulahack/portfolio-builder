@@ -1,8 +1,9 @@
 "use client";
-import React, { useRef, useState } from "react";
+import React, { Suspense, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { usePortfolioEditor } from "@/lib/hooks/usePortfolioEditor";
 import UploadZone from "@/components/UploadZone";
-import ProfileForm from "@/components/ProfileForm";
+import ProfileDashboard from "@/components/ProfileDashboard";
 import TemplateSelector from "@/components/TemplateSelector";
 import PublishPanel from "@/components/publish/PublishPanel";
 import DataEditor from "@/components/editor/DataEditor";
@@ -14,14 +15,18 @@ import type { PortfolioData } from "@/lib/types";
 
 type EntryMode = "choose" | "upload" | "profile";
 
-export default function BuildPage() {
+// Inner component that reads searchParams — must be inside <Suspense>
+function BuildPageInner() {
+  const searchParams = useSearchParams();
+  const initialMode = (searchParams.get("mode") as EntryMode | null) ?? "choose";
+
   const {
     data, templateId, editMode, hydrated,
     updateData, loadPortfolio, clearPortfolio,
     setTemplateId, setEditMode,
   } = usePortfolioEditor();
 
-  const [entryMode, setEntryMode] = useState<EntryMode>("choose");
+  const [entryMode, setEntryMode] = useState<EntryMode>(initialMode);
   const [customizeMode, setCustomizeMode] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -129,28 +134,22 @@ export default function BuildPage() {
     );
   }
 
-  // ── Profile-form path ────────────────────────────────────────────────────────
+  // ── Profile-dashboard path ────────────────────────────────────────────────────
   if (!hasData && entryMode === "profile") {
     return (
       <div className="min-h-screen bg-gray-50">
-        <header className="sticky top-0 z-50 bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-3">
-          <button onClick={() => setEntryMode("choose")} className="text-gray-400 hover:text-gray-600 text-sm">
-            ← Back
-          </button>
-          <span className="font-bold text-gray-900 text-sm">Build your profile</span>
-        </header>
-        <div className="max-w-2xl mx-auto px-4 py-10">
-          <ProfileForm
-            onComplete={(d) => loadPortfolio(d as Partial<PortfolioData>)}
-            onCancel={() => setEntryMode("choose")}
-          />
-          <p className="text-center text-xs text-gray-400 mt-6">
-            Have a resume instead?{" "}
-            <button onClick={() => setEntryMode("upload")} className="text-purple-500 hover:text-purple-700 underline">
-              Upload it here
+        <header className="sticky top-0 z-50 bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setEntryMode("choose")} className="text-gray-400 hover:text-gray-600 text-sm">
+              ← Back
             </button>
-          </p>
-        </div>
+            <span className="font-bold text-gray-900 text-sm">Build your profile</span>
+          </div>
+          <button onClick={() => setEntryMode("upload")} className="text-xs text-gray-400 hover:text-purple-600 underline">
+            Upload a resume instead
+          </button>
+        </header>
+        <ProfileDashboard onComplete={(d) => loadPortfolio(d as Partial<PortfolioData>)} />
       </div>
     );
   }
@@ -306,5 +305,13 @@ export default function BuildPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function BuildPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><p className="text-gray-400 text-sm">Loading…</p></div>}>
+      <BuildPageInner />
+    </Suspense>
   );
 }

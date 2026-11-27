@@ -94,6 +94,20 @@ ${rawText.slice(0, 6000)}`;
 }
 
 /**
+ * Strip Bob's chain-of-thought preamble from a plain-text response.
+ *
+ * Bob sometimes prefixes its answer with reasoning text separated from the
+ * real answer by one or more "---" lines. We drop everything up to (and
+ * including) the last such separator so only the actual bio text remains.
+ * If there is no separator we return the full text unchanged.
+ */
+function stripPreamble(text: string): string {
+  // Split on lines of only dashes (---, ————, etc.)
+  const parts = text.split(/\n[-–—]{3,}\s*\n/);
+  return parts[parts.length - 1].trim();
+}
+
+/**
  * Ask Bob to generate a polished bio and rewrite bullet points as portfolio prose.
  * Callers must guard with hasBobKey before calling.
  */
@@ -102,14 +116,16 @@ export async function generatePortfolioCopy(data: Partial<PortfolioData>): Promi
     .map((e) => `${e.role} at ${e.company}: ${e.bullets.join("; ")}`)
     .join("\n");
 
-  const bioPrompt = `Write a compelling 2-3 sentence first-person professional bio for a portfolio website. Be specific and avoid buzzwords. No heading, just the bio text.
+  // Explicit instruction to suppress reasoning preamble
+  const bioPrompt = `Write a 2-3 sentence first-person professional bio for a portfolio website.
+Rules: output ONLY the bio sentences — no headings, no preamble, no explanation, no "---", no markdown.
 
 Name: ${data.name ?? ""}
 Title: ${data.title ?? ""}
 Experience: ${expSummary}
 Skills: ${(data.skills ?? []).slice(0, 15).join(", ")}`;
 
-  const bio = (await runBob(bioPrompt)).trim();
+  const bio = stripPreamble((await runBob(bioPrompt)).trim());
 
   // Rewrite bullets for each experience entry
   const updatedExperience = await Promise.all(
